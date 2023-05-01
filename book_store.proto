@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+message KeyValue {
+  string key = 1;
+  string value = 2;
+}
+
+service DataStore {
+  rpc Get(KeyValue) returns (KeyValue) {}
+  rpc Put(KeyValue) returns (KeyValue) {}
+}
+
+message NodeInfo {
+  string address = 1;
+  int32 port = 2;
+}
+
+service ReplicationChain {
+  rpc ForwardPut(KeyValue) returns (KeyValue) {}
+  rpc ForwardGet(KeyValue) returns (KeyValue) {}
+}
+
+message ChainNode {
+  NodeInfo node = 1;
+  bool is_head = 2;
+  bool is_tail = 3;
+}
+
+message ChainInfo {
+  repeated ChainNode nodes = 1;
+}
