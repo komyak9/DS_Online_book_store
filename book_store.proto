@@ -1,31 +1,55 @@
 syntax = "proto3";
 
-message KeyValue {
-  string key = 1;
-  string value = 2;
+
+service BookStore {
+  rpc CreateLocalStores(CreateLocalStoresRequest) returns (CreateLocalStoresResponse) {}
 }
 
-service DataStore {
-  rpc Get(KeyValue) returns (KeyValue) {}
-  rpc Put(KeyValue) returns (KeyValue) {}
+message CreateLocalStoresRequest {
+  int32 processes_number = 1;
 }
 
-message NodeInfo {
-  string address = 1;
-  int32 port = 2;
+message CreateLocalStoresResponse {
+  bool success = 1;
+  string message = 2;
+  string client_id = 3;
+  repeated string processes_ids = 4;
+  repeated string processes_ports = 5;
 }
 
-service ReplicationChain {
-  rpc ForwardPut(KeyValue) returns (KeyValue) {}
-  rpc ForwardGet(KeyValue) returns (KeyValue) {}
+
+
+service DataStorage {
+  rpc InitialWriteOperation(InitialWriteOperationRequest) returns (InitialWriteOperationResponse) {}
+  rpc CommonWriteOperation(CommonWriteOperationRequest) returns (CommonWriteOperationResponse) {}
+  rpc ListBooks(ListBooksRequest) returns (ListBooksResponse) {}
 }
 
-message ChainNode {
-  NodeInfo node = 1;
-  bool is_head = 2;
-  bool is_tail = 3;
+message InitialWriteOperationRequest {
+  string book_name = 1;
+  float book_price = 2;
 }
 
-message ChainInfo {
-  repeated ChainNode nodes = 1;
+message InitialWriteOperationResponse {
+  bool success = 1;
+  string message = 2;
 }
+
+message CommonWriteOperationRequest {
+  string book_name = 1;
+  float book_price = 2;
+}
+
+message CommonWriteOperationResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ListBooksRequest {
+}
+
+message ListBooksResponse {
+  bool success = 1;
+  string message = 2;
+}
+
