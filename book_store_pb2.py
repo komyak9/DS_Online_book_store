@@ -13,31 +13,43 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10\x62ook_store.proto\"4\n\x18\x43reateLocalStoresRequest\x12\x18\n\x10processes_number\x18\x01 \x01(\x05\"\x80\x01\n\x19\x43reateLocalStoresResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x11\n\tclient_id\x18\x03 \x01(\t\x12\x15\n\rprocesses_ids\x18\x04 \x03(\t\x12\x17\n\x0fprocesses_ports\x18\x05 \x03(\t\"E\n\x1cInitialWriteOperationRequest\x12\x11\n\tbook_name\x18\x01 \x01(\t\x12\x12\n\nbook_price\x18\x02 \x01(\x02\"A\n\x1dInitialWriteOperationResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"D\n\x1b\x43ommonWriteOperationRequest\x12\x11\n\tbook_name\x18\x01 \x01(\t\x12\x12\n\nbook_price\x18\x02 \x01(\x02\"@\n\x1c\x43ommonWriteOperationResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"\x12\n\x10ListBooksRequest\"5\n\x11ListBooksResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t2Y\n\tBookStore\x12L\n\x11\x43reateLocalStores\x12\x19.CreateLocalStoresRequest\x1a\x1a.CreateLocalStoresResponse\"\x00\x32\xf4\x01\n\x0b\x44\x61taStorage\x12X\n\x15InitialWriteOperation\x12\x1d.InitialWriteOperationRequest\x1a\x1e.InitialWriteOperationResponse\"\x00\x12U\n\x14\x43ommonWriteOperation\x12\x1c.CommonWriteOperationRequest\x1a\x1d.CommonWriteOperationResponse\"\x00\x12\x34\n\tListBooks\x12\x11.ListBooksRequest\x1a\x12.ListBooksResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10\x62ook_store.proto\"H\n\x18\x43reateLocalStoresRequest\x12\x18\n\x10processes_number\x18\x01 \x01(\x05\x12\x12\n\nip_address\x18\x02 \x01(\t\"g\n\x19\x43reateLocalStoresResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x11\n\tclient_id\x18\x03 \x01(\t\x12\x15\n\rprocesses_ids\x18\x04 \x03(\t\"\'\n\x12\x43reateChainRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\"\xdf\x02\n\x13\x43reateChainResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12J\n\x14processes_sucs_preds\x18\x03 \x03(\x0b\x32,.CreateChainResponse.ProcessesSucsPredsEntry\x12I\n\x13processes_addresses\x18\x04 \x03(\x0b\x32,.CreateChainResponse.ProcessesAddressesEntry\x12\x19\n\x11head_node_address\x18\x05 \x01(\t\x1a\x39\n\x17ProcessesSucsPredsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x1a\x39\n\x17ProcessesAddressesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"E\n\x1cInitialWriteOperationRequest\x12\x11\n\tbook_name\x18\x01 \x01(\t\x12\x12\n\nbook_price\x18\x02 \x01(\x02\"A\n\x1dInitialWriteOperationResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"D\n\x1b\x43ommonWriteOperationRequest\x12\x11\n\tbook_name\x18\x01 \x01(\t\x12\x12\n\nbook_price\x18\x02 \x01(\x02\"@\n\x1c\x43ommonWriteOperationResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"\x12\n\x10ListBooksRequest\"5\n\x11ListBooksResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t2\x95\x01\n\tBookStore\x12L\n\x11\x43reateLocalStores\x12\x19.CreateLocalStoresRequest\x1a\x1a.CreateLocalStoresResponse\"\x00\x12:\n\x0b\x43reateChain\x12\x13.CreateChainRequest\x1a\x14.CreateChainResponse\"\x00\x32\xf4\x01\n\x0b\x44\x61taStorage\x12X\n\x15InitialWriteOperation\x12\x1d.InitialWriteOperationRequest\x1a\x1e.InitialWriteOperationResponse\"\x00\x12U\n\x14\x43ommonWriteOperation\x12\x1c.CommonWriteOperationRequest\x1a\x1d.CommonWriteOperationResponse\"\x00\x12\x34\n\tListBooks\x12\x11.ListBooksRequest\x1a\x12.ListBooksResponse\"\x00\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'book_store_pb2', globals())
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
+  _CREATECHAINRESPONSE_PROCESSESSUCSPREDSENTRY._options = None
+  _CREATECHAINRESPONSE_PROCESSESSUCSPREDSENTRY._serialized_options = b'8\001'
+  _CREATECHAINRESPONSE_PROCESSESADDRESSESENTRY._options = None
+  _CREATECHAINRESPONSE_PROCESSESADDRESSESENTRY._serialized_options = b'8\001'
   _CREATELOCALSTORESREQUEST._serialized_start=20
-  _CREATELOCALSTORESREQUEST._serialized_end=72
-  _CREATELOCALSTORESRESPONSE._serialized_start=75
-  _CREATELOCALSTORESRESPONSE._serialized_end=203
-  _INITIALWRITEOPERATIONREQUEST._serialized_start=205
-  _INITIALWRITEOPERATIONREQUEST._serialized_end=274
-  _INITIALWRITEOPERATIONRESPONSE._serialized_start=276
-  _INITIALWRITEOPERATIONRESPONSE._serialized_end=341
-  _COMMONWRITEOPERATIONREQUEST._serialized_start=343
-  _COMMONWRITEOPERATIONREQUEST._serialized_end=411
-  _COMMONWRITEOPERATIONRESPONSE._serialized_start=413
-  _COMMONWRITEOPERATIONRESPONSE._serialized_end=477
-  _LISTBOOKSREQUEST._serialized_start=479
-  _LISTBOOKSREQUEST._serialized_end=497
-  _LISTBOOKSRESPONSE._serialized_start=499
-  _LISTBOOKSRESPONSE._serialized_end=552
-  _BOOKSTORE._serialized_start=554
-  _BOOKSTORE._serialized_end=643
-  _DATASTORAGE._serialized_start=646
-  _DATASTORAGE._serialized_end=890
+  _CREATELOCALSTORESREQUEST._serialized_end=92
+  _CREATELOCALSTORESRESPONSE._serialized_start=94
+  _CREATELOCALSTORESRESPONSE._serialized_end=197
+  _CREATECHAINREQUEST._serialized_start=199
+  _CREATECHAINREQUEST._serialized_end=238
+  _CREATECHAINRESPONSE._serialized_start=241
+  _CREATECHAINRESPONSE._serialized_end=592
+  _CREATECHAINRESPONSE_PROCESSESSUCSPREDSENTRY._serialized_start=476
+  _CREATECHAINRESPONSE_PROCESSESSUCSPREDSENTRY._serialized_end=533
+  _CREATECHAINRESPONSE_PROCESSESADDRESSESENTRY._serialized_start=535
+  _CREATECHAINRESPONSE_PROCESSESADDRESSESENTRY._serialized_end=592
+  _INITIALWRITEOPERATIONREQUEST._serialized_start=594
+  _INITIALWRITEOPERATIONREQUEST._serialized_end=663
+  _INITIALWRITEOPERATIONRESPONSE._serialized_start=665
+  _INITIALWRITEOPERATIONRESPONSE._serialized_end=730
+  _COMMONWRITEOPERATIONREQUEST._serialized_start=732
+  _COMMONWRITEOPERATIONREQUEST._serialized_end=800
+  _COMMONWRITEOPERATIONRESPONSE._serialized_start=802
+  _COMMONWRITEOPERATIONRESPONSE._serialized_end=866
+  _LISTBOOKSREQUEST._serialized_start=868
+  _LISTBOOKSREQUEST._serialized_end=886
+  _LISTBOOKSRESPONSE._serialized_start=888
+  _LISTBOOKSRESPONSE._serialized_end=941
+  _BOOKSTORE._serialized_start=944
+  _BOOKSTORE._serialized_end=1093
+  _DATASTORAGE._serialized_start=1096
+  _DATASTORAGE._serialized_end=1340
 # @@protoc_insertion_point(module_scope)

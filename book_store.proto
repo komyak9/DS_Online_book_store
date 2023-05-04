@@ -3,10 +3,13 @@ syntax = "proto3";
 
 service BookStore {
   rpc CreateLocalStores(CreateLocalStoresRequest) returns (CreateLocalStoresResponse) {}
+  rpc CreateChain(CreateChainRequest) returns (CreateChainResponse) {}
+  rpc CheckChain(CheckChainRequest) returns (CheckChainResponse) {}
 }
 
 message CreateLocalStoresRequest {
   int32 processes_number = 1;
+  string ip_address = 2;
 }
 
 message CreateLocalStoresResponse {
@@ -14,8 +17,33 @@ message CreateLocalStoresResponse {
   string message = 2;
   string client_id = 3;
   repeated string processes_ids = 4;
-  repeated string processes_ports = 5;
 }
+
+message CreateChainRequest {
+  string client_id = 1;
+}
+
+message CreateChainResponse {
+  bool success = 1;
+  string message = 2;
+  map<string, string> processes_sucs_preds = 3;
+  map<string, string> processes_addresses = 4;
+  string head_node_address = 5;
+}
+
+message CheckChainRequest {
+  string client_id = 1;
+}
+
+message CheckChainResponse {
+  bool success = 1;
+  string message = 2;
+  map<string, string> processes_sucs_preds = 3;
+  map<string, string> processes_addresses = 4;
+  string head_node_address = 5;
+}
+
+
 
 
 

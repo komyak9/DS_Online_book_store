@@ -19,12 +19,23 @@ class BookStoreStub(object):
                 request_serializer=book__store__pb2.CreateLocalStoresRequest.SerializeToString,
                 response_deserializer=book__store__pb2.CreateLocalStoresResponse.FromString,
                 )
+        self.CreateChain = channel.unary_unary(
+                '/BookStore/CreateChain',
+                request_serializer=book__store__pb2.CreateChainRequest.SerializeToString,
+                response_deserializer=book__store__pb2.CreateChainResponse.FromString,
+                )
 
 
 class BookStoreServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def CreateLocalStores(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CreateChain(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -37,6 +48,11 @@ def add_BookStoreServicer_to_server(servicer, server):
                     servicer.CreateLocalStores,
                     request_deserializer=book__store__pb2.CreateLocalStoresRequest.FromString,
                     response_serializer=book__store__pb2.CreateLocalStoresResponse.SerializeToString,
+            ),
+            'CreateChain': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateChain,
+                    request_deserializer=book__store__pb2.CreateChainRequest.FromString,
+                    response_serializer=book__store__pb2.CreateChainResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -62,6 +78,23 @@ class BookStore(object):
         return grpc.experimental.unary_unary(request, target, '/BookStore/CreateLocalStores',
             book__store__pb2.CreateLocalStoresRequest.SerializeToString,
             book__store__pb2.CreateLocalStoresResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def CreateChain(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/BookStore/CreateChain',
+            book__store__pb2.CreateChainRequest.SerializeToString,
+            book__store__pb2.CreateChainResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

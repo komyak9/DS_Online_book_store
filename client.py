@@ -9,27 +9,23 @@ import book_store_pb2
 import book_store_pb2_grpc
 
 class DataStorageServicer(book_store_pb2_grpc.DataStorageServicer):
-    def __init__(self, id):
+    def __init__(self, id, predecessor_address, successor_address, head_node_address):
         self.store_id = id
-        self.head_node = None
-        self.predecessor = None # address
-        self.successor = None   # address
+        self.head_node_address = head_node_address
+        self.predecessor_address = predecessor_address
+        self.successor_address = successor_address
         self.books = {}
-
-    def set_chain_dependecies(self, head_node, predecessor, successor):
-        self.head_node = head_node
-        self.predecessor = predecessor
-        self.successor = successor
+        print(f"Head {head_node_address}\t Pred {predecessor_address} Suc {successor_address}")
 
     # Client sends a request to write.
-    # DataStore checks if this particular client has a head node.
+    # DataStore checks if it is a head node.
     def InitialWriteOperation(self, request, context):
         msg = ""
-        if self.predecessor is None:    # In this draft implementation without chain it is always True.
+        if self.predecessor_address is None:    # In this draft implementation without chain it is always True.
             self.books[request.book_name] = request.book_price
             msg = f"New book is successfully added to {self.store_id} store."
         else:
-            channel = grpc.insecure_channel(self.head_node)
+            channel = grpc.insecure_channel(self.head_node_address)
             stub = book_store_pb2_grpc.DataStorageStub(channel)
             message = book_store_pb2.CommonWriteOperationRequest(book_name=request.book_name, price=request.price)
             try:
@@ -54,8 +50,8 @@ class DataStorageServicer(book_store_pb2_grpc.DataStorageServicer):
     def CommonWriteOperation(self, request, context):
         self.books[request.book_name] = request.price
 
-        if self.successor is not None:
-            channel = grpc.insecure_channel(self.successor)
+        if self.successor_address is not None:
+            channel = grpc.insecure_channel(self.successor_address)
             stub = book_store_pb2_grpc.DataStorageStub(channel)
             message = book_store_pb2.CommonWriteOperationRequest(book_name=request.book_name, price=request.price)
             try:
@@ -79,9 +75,13 @@ class BookStoreClient:
         # Processes storage of DataStore objects.
         self.processes_addresses = {}
 
+        # Chain-related info
         self.processes_ids = []
+        self.processes_ports = []
+        self.is_chain_created = False
+
         # Ordered processes in a chain.
-        self.processes_chain = []   # queue?
+        self.processes_chain = []
         # List of all available commands.
         self.commands = {"Local-store-ps": self.create_local_stores,
                          "Create-chain": self.create_chain,
@@ -98,33 +98,55 @@ class BookStoreClient:
     # Local-store-ps command             #
     ######################################
     def create_local_stores(self, k=1):
-        # By default, it creates 1 process.
-        # In our implementation, we specify k processes manually.
-
         # On the server side, it creates ids for the client and the processes.
-        # Then, for each DataStore process we create 'servers' and run them in parallel.
-        response = self.stub.CreateLocalStores(book_store_pb2.CreateLocalStoresRequest(processes_number=int(k)))
+        response = self.stub.CreateLocalStores(book_store_pb2.CreateLocalStoresRequest(processes_number=int(k),
+                                                                                       ip_address = self.ip_address))
         if response.success:
             self.client_id = response.client_id
             self.processes_ids = response.processes_ids
+
             print(response.message)
             print(f"Client: {self.client_id}\nProcesses: {self.processes_ids}")
-
-            for process_id, port in zip(response.processes_ids, response.processes_ports):
-                self.processes_addresses[process_id] = self.ip_address + ':' + port
-                process = multiprocessing.Process(target=run_grpc_server, args=(self.ip_address, port, process_id,))
-                print(f"Process {process_id} is running on {self.processes_addresses[process_id]}")
-                process.start()
         else:
             print("Something went wrong. Processes are not initialized.")
 
     ######################################
     # Creates a chain of processes       #
     ######################################
-    def create_chain(self):
-        # Chain is built out of processes which are placed in a random order.
-        # Request to the server?
-        pass
+    def create_chain(self, args):
+        # Server creates a chain with all the processes and assigns ports for each DataStore.
+        # For each client's DataStore process we create 'servers' and run them in parallel.
+
+        response = self.stub.CreateChain(book_store_pb2.CreateChainRequest(client_id=self.client_id))
+        if response.success:
+            self.is_chain_created = True
+            print(f"{response.message}")
+
+            head_node_address = response.head_node_address
+            processes_sucs_preds = dict(response.processes_sucs_preds)
+            processes_addresses = dict(response.processes_addresses)
+
+            for process_id in self.processes_ids:
+                address = processes_addresses.get(process_id)
+                predecessor_id = processes_sucs_preds[process_id].split(',')[0]
+                successor_id = processes_sucs_preds[process_id].split(',')[1]
+                if predecessor_id == 'None':
+                    predecessor = None
+                else:
+                    predecessor = processes_addresses.get(predecessor_id)
+                if successor_id == 'None':
+                    successor = None
+                else:
+                    successor = processes_addresses.get(successor_id)
+
+                process = multiprocessing.Process(target=run_grpc_server,
+                                                  args=(address, process_id, predecessor, successor,
+                                                        head_node_address,))
+                print(f"Process {process_id} is running on {address}")
+                process.start()
+
+        else:
+            print(f"Chain wasn't created: {response.message}")
 
     ######################################
     # Removes chain's head               #
@@ -196,10 +218,10 @@ class BookStoreClient:
         pass
 
 
-def run_grpc_server(ip, port, process_id):
+def run_grpc_server(address, process_id, predecessor_address, successor_address, head_node_address):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    book_store_pb2_grpc.add_DataStorageServicer_to_server(DataStorageServicer(process_id), server)
-    server.add_insecure_port(f'{ip}:{port}')
+    book_store_pb2_grpc.add_DataStorageServicer_to_server(DataStorageServicer(process_id, predecessor_address, successor_address, head_node_address), server)
+    server.add_insecure_port(f'{address}')
     server.start()
     server.wait_for_termination()
 
