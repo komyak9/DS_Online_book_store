@@ -47,6 +47,8 @@ class BookStoreServicer(book_store_pb2_grpc.BookStoreServicer):
                 self.processes_chain.extend(processes)
             random.shuffle(self.processes_chain)
 
+            print(f"Chain {self.processes_chain}")
+
             self.is_chain_created = True
             message = "Chain was created successfully."
             print(message)
@@ -65,6 +67,19 @@ class BookStoreServicer(book_store_pb2_grpc.BookStoreServicer):
                                                   processes_sucs_preds = client_processes_preds_sucs,
                                                   processes_addresses = self.processes_addresses,
                                                   head_node_address=head_node_address)
+
+    def CheckChain(self, request, context):
+        if not self.is_chain_created:
+            return book_store_pb2.CheckChainResponse(is_chain_created=False)
+
+        print(f"---Client {request.client_id} pings server!---")
+        client_processes_preds_sucs = self.extract_client_processes(request.client_id)
+        head_node_address = self.processes_addresses[self.processes_chain[0]]
+        return book_store_pb2.CheckChainResponse(is_chain_created=True,
+                                                  processes_sucs_preds=client_processes_preds_sucs,
+                                                  processes_addresses=self.processes_addresses,
+                                                  head_node_address=head_node_address)
+
 
     def generate_processes_addresses(self):
         for client in self.clients:

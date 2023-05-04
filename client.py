@@ -1,6 +1,5 @@
 from concurrent import futures
 import multiprocessing
-import random
 import threading
 import time
 
@@ -9,13 +8,14 @@ import book_store_pb2
 import book_store_pb2_grpc
 
 class DataStorageServicer(book_store_pb2_grpc.DataStorageServicer):
-    def __init__(self, id, predecessor_address, successor_address, head_node_address):
+    def __init__(self, id, address, predecessor_address, successor_address, head_node_address):
         self.store_id = id
+        self.address = address
         self.head_node_address = head_node_address
         self.predecessor_address = predecessor_address
         self.successor_address = successor_address
         self.books = {}
-        print(f"Head {head_node_address}\t Pred {predecessor_address} Suc {successor_address}")
+        #print(f"-- {predecessor_address} -- {address} -- {successor_address} --\n")
 
     # Client sends a request to write.
     # DataStore checks if it is a head node.
@@ -122,28 +122,7 @@ class BookStoreClient:
             self.is_chain_created = True
             print(f"{response.message}")
 
-            head_node_address = response.head_node_address
-            processes_sucs_preds = dict(response.processes_sucs_preds)
-            processes_addresses = dict(response.processes_addresses)
-
-            for process_id in self.processes_ids:
-                address = processes_addresses.get(process_id)
-                predecessor_id = processes_sucs_preds[process_id].split(',')[0]
-                successor_id = processes_sucs_preds[process_id].split(',')[1]
-                if predecessor_id == 'None':
-                    predecessor = None
-                else:
-                    predecessor = processes_addresses.get(predecessor_id)
-                if successor_id == 'None':
-                    successor = None
-                else:
-                    successor = processes_addresses.get(successor_id)
-
-                process = multiprocessing.Process(target=run_grpc_server,
-                                                  args=(address, process_id, predecessor, successor,
-                                                        head_node_address,))
-                print(f"Process {process_id} is running on {address}")
-                process.start()
+            self.initiate_process_creation(response)
 
         else:
             print(f"Chain wasn't created: {response.message}")
@@ -176,6 +155,10 @@ class BookStoreClient:
         # Creates a data item, stores it in the DataStore objects.
         #responsible_process = self.processes_ids[random.randint(0, len(self.processes_ids)-1)]
         responsible_process = self.processes_ids[1] # hard-coded so far
+        if not self.is_chain_created:
+            print(f"To call this function, a chain must be created.")
+            return
+
         channel = grpc.insecure_channel(f'{self.processes_addresses[responsible_process]}')
         stub = book_store_pb2_grpc.DataStorageStub(channel)
 
@@ -192,6 +175,9 @@ class BookStoreClient:
     def list_books(self, args):
         # Shows all available books.
         # Data is stored in the DataStore objects.
+        if not self.is_chain_created:
+            print(f"To call this function, a chain must be created.")
+            return
 
         # responsible_process = self.processes_ids[random.randint(0, len(self.processes_ids)-1)]
         responsible_process = self.processes_ids[1]
@@ -218,9 +204,52 @@ class BookStoreClient:
         pass
 
 
+    def check_chain_created(self):
+        while not self.is_chain_created:
+            if self.client_id is None:
+                time.sleep(10)
+                continue
+
+            message = book_store_pb2.CheckChainRequest(client_id=self.client_id)
+            response = self.stub.CheckChain(message)
+
+            if not response.is_chain_created:
+                time.sleep(10)
+                continue
+            else:
+                self.is_chain_created = True
+                self.initiate_process_creation(response)
+
+    def initiate_process_creation(self, response):
+        head_node_address = response.head_node_address
+        processes_sucs_preds = dict(response.processes_sucs_preds)
+        processes_addresses = dict(response.processes_addresses)
+
+        for process_id in self.processes_ids:
+            address = processes_addresses.get(process_id)
+            predecessor_id = processes_sucs_preds[process_id].split(',')[0]
+            successor_id = processes_sucs_preds[process_id].split(',')[1]
+            if predecessor_id == 'None':
+                predecessor = None
+            else:
+                predecessor = processes_addresses.get(predecessor_id)
+            if successor_id == 'None':
+                successor = None
+            else:
+                successor = processes_addresses.get(successor_id)
+
+            #print(f"\n-- {predecessor_id} -- {process_id} -- {successor_id} --")
+            #print(f"-- {predecessor} -- {address} -- {successor} --\n")
+            process = multiprocessing.Process(target=run_grpc_server,
+                                              args=(address, process_id, predecessor, successor,
+                                                    head_node_address,))
+            print(f"Process {process_id} is running on {address}")
+            process.start()
+
+
 def run_grpc_server(address, process_id, predecessor_address, successor_address, head_node_address):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    book_store_pb2_grpc.add_DataStorageServicer_to_server(DataStorageServicer(process_id, predecessor_address, successor_address, head_node_address), server)
+    book_store_pb2_grpc.add_DataStorageServicer_to_server(DataStorageServicer(process_id, address, predecessor_address, successor_address, head_node_address), server)
     server.add_insecure_port(f'{address}')
     server.start()
     server.wait_for_termination()
@@ -232,6 +261,10 @@ def run_client():
         stub = book_store_pb2_grpc.BookStoreStub(channel)
         client = BookStoreClient(stub, ip_address)
         print("Client is starting...")
+
+        # Pinging server to figure out if a chain exists
+        my_thread = threading.Thread(target=client.check_chain_created)
+        my_thread.start()
 
         while True:
             # Input a command and it's arguments if there are any.

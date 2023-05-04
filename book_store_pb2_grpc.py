@@ -24,6 +24,11 @@ class BookStoreStub(object):
                 request_serializer=book__store__pb2.CreateChainRequest.SerializeToString,
                 response_deserializer=book__store__pb2.CreateChainResponse.FromString,
                 )
+        self.CheckChain = channel.unary_unary(
+                '/BookStore/CheckChain',
+                request_serializer=book__store__pb2.CheckChainRequest.SerializeToString,
+                response_deserializer=book__store__pb2.CheckChainResponse.FromString,
+                )
 
 
 class BookStoreServicer(object):
@@ -41,6 +46,12 @@ class BookStoreServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def CheckChain(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_BookStoreServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -53,6 +64,11 @@ def add_BookStoreServicer_to_server(servicer, server):
                     servicer.CreateChain,
                     request_deserializer=book__store__pb2.CreateChainRequest.FromString,
                     response_serializer=book__store__pb2.CreateChainResponse.SerializeToString,
+            ),
+            'CheckChain': grpc.unary_unary_rpc_method_handler(
+                    servicer.CheckChain,
+                    request_deserializer=book__store__pb2.CheckChainRequest.FromString,
+                    response_serializer=book__store__pb2.CheckChainResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -95,6 +111,23 @@ class BookStore(object):
         return grpc.experimental.unary_unary(request, target, '/BookStore/CreateChain',
             book__store__pb2.CreateChainRequest.SerializeToString,
             book__store__pb2.CreateChainResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def CheckChain(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/BookStore/CheckChain',
+            book__store__pb2.CheckChainRequest.SerializeToString,
+            book__store__pb2.CheckChainResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

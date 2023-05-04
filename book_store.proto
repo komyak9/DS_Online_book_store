@@ -36,11 +36,10 @@ message CheckChainRequest {
 }
 
 message CheckChainResponse {
-  bool success = 1;
-  string message = 2;
-  map<string, string> processes_sucs_preds = 3;
-  map<string, string> processes_addresses = 4;
-  string head_node_address = 5;
+  bool is_chain_created = 1;
+  map<string, string> processes_sucs_preds = 2;
+  map<string, string> processes_addresses = 3;
+  string head_node_address = 4;
 }
 
 
