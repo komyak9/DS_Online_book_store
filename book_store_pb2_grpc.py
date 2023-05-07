@@ -29,6 +29,11 @@ class BookStoreStub(object):
                 request_serializer=book__store__pb2.CheckChainRequest.SerializeToString,
                 response_deserializer=book__store__pb2.CheckChainResponse.FromString,
                 )
+        self.ListChain = channel.unary_unary(
+                '/BookStore/ListChain',
+                request_serializer=book__store__pb2.ListChainRequest.SerializeToString,
+                response_deserializer=book__store__pb2.ListChainResponse.FromString,
+                )
 
 
 class BookStoreServicer(object):
@@ -52,6 +57,12 @@ class BookStoreServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ListChain(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_BookStoreServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -69,6 +80,11 @@ def add_BookStoreServicer_to_server(servicer, server):
                     servicer.CheckChain,
                     request_deserializer=book__store__pb2.CheckChainRequest.FromString,
                     response_serializer=book__store__pb2.CheckChainResponse.SerializeToString,
+            ),
+            'ListChain': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListChain,
+                    request_deserializer=book__store__pb2.ListChainRequest.FromString,
+                    response_serializer=book__store__pb2.ListChainResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -131,6 +147,23 @@ class BookStore(object):
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
+    @staticmethod
+    def ListChain(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/BookStore/ListChain',
+            book__store__pb2.ListChainRequest.SerializeToString,
+            book__store__pb2.ListChainResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
 
 class DataStorageStub(object):
     """Missing associated documentation comment in .proto file."""
@@ -141,10 +174,15 @@ class DataStorageStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.InitialWriteOperation = channel.unary_unary(
-                '/DataStorage/InitialWriteOperation',
-                request_serializer=book__store__pb2.InitialWriteOperationRequest.SerializeToString,
-                response_deserializer=book__store__pb2.InitialWriteOperationResponse.FromString,
+        self.ReadFromDataStore = channel.unary_unary(
+                '/DataStorage/ReadFromDataStore',
+                request_serializer=book__store__pb2.ReadFromDataStoreRequest.SerializeToString,
+                response_deserializer=book__store__pb2.ReadFromDataStoreResponse.FromString,
+                )
+        self.WriteToDataStore = channel.unary_unary(
+                '/DataStorage/WriteToDataStore',
+                request_serializer=book__store__pb2.WriteToDataStoreRequest.SerializeToString,
+                response_deserializer=book__store__pb2.WriteToDataStoreResponse.FromString,
                 )
         self.CommonWriteOperation = channel.unary_unary(
                 '/DataStorage/CommonWriteOperation',
@@ -161,7 +199,13 @@ class DataStorageStub(object):
 class DataStorageServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def InitialWriteOperation(self, request, context):
+    def ReadFromDataStore(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def WriteToDataStore(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -182,10 +226,15 @@ class DataStorageServicer(object):
 
 def add_DataStorageServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'InitialWriteOperation': grpc.unary_unary_rpc_method_handler(
-                    servicer.InitialWriteOperation,
-                    request_deserializer=book__store__pb2.InitialWriteOperationRequest.FromString,
-                    response_serializer=book__store__pb2.InitialWriteOperationResponse.SerializeToString,
+            'ReadFromDataStore': grpc.unary_unary_rpc_method_handler(
+                    servicer.ReadFromDataStore,
+                    request_deserializer=book__store__pb2.ReadFromDataStoreRequest.FromString,
+                    response_serializer=book__store__pb2.ReadFromDataStoreResponse.SerializeToString,
+            ),
+            'WriteToDataStore': grpc.unary_unary_rpc_method_handler(
+                    servicer.WriteToDataStore,
+                    request_deserializer=book__store__pb2.WriteToDataStoreRequest.FromString,
+                    response_serializer=book__store__pb2.WriteToDataStoreResponse.SerializeToString,
             ),
             'CommonWriteOperation': grpc.unary_unary_rpc_method_handler(
                     servicer.CommonWriteOperation,
@@ -208,7 +257,7 @@ class DataStorage(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def InitialWriteOperation(request,
+    def ReadFromDataStore(request,
             target,
             options=(),
             channel_credentials=None,
@@ -218,9 +267,26 @@ class DataStorage(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/DataStorage/InitialWriteOperation',
-            book__store__pb2.InitialWriteOperationRequest.SerializeToString,
-            book__store__pb2.InitialWriteOperationResponse.FromString,
+        return grpc.experimental.unary_unary(request, target, '/DataStorage/ReadFromDataStore',
+            book__store__pb2.ReadFromDataStoreRequest.SerializeToString,
+            book__store__pb2.ReadFromDataStoreResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def WriteToDataStore(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/DataStorage/WriteToDataStore',
+            book__store__pb2.WriteToDataStoreRequest.SerializeToString,
+            book__store__pb2.WriteToDataStoreResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

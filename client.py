@@ -1,3 +1,4 @@
+import random
 from concurrent import futures
 import multiprocessing
 import threading
@@ -15,29 +16,47 @@ class DataStorageServicer(book_store_pb2_grpc.DataStorageServicer):
         self.predecessor_address = predecessor_address
         self.successor_address = successor_address
         self.books = {}
-        #print(f"-- {predecessor_address} -- {address} -- {successor_address} --\n")
 
-    # Client sends a request to write.
-    # DataStore checks if it is a head node.
-    def InitialWriteOperation(self, request, context):
+    def ReadFromDataStore(self, request, context):
+        """Fetch a book and its price from the data store.
+        If this data store is not head, consult the head node
+        to check if the current node contains up-to-date info."""
         msg = ""
-        if self.predecessor_address is None:    # In this draft implementation without chain it is always True.
-            self.books[request.book_name] = request.book_price
-            msg = f"New book is successfully added to {self.store_id} store."
+        success = False
+        if request.book_name in self.books:
+            success = True
+            msg = f"{request.book_name}: {self.books[request.book_name]}"
         else:
-            channel = grpc.insecure_channel(self.head_node_address)
-            stub = book_store_pb2_grpc.DataStorageStub(channel)
-            message = book_store_pb2.CommonWriteOperationRequest(book_name=request.book_name, price=request.price)
-            try:
-                response = stub.CommonWriteOperation(message)
-                msg = response.message
-            except grpc.RpcError:
-                msg = "Store is not available"
-                return book_store_pb2.ListBooksResponse(success=False, message=msg)
+            msg = f"Book {request.book_name} is not available in the store."
+        return book_store_pb2.ReadFromDataStoreResponse(success=success, message=msg)
 
-        return book_store_pb2.ListBooksResponse(success=True, message=msg)
+    def WriteToDataStore(self, request, context):
+        """Respond to client's request for writing a new book to the store.
+        Add a new book to the head of the chain and propagate the message to the next node."""
+        # If the current node is a head node.
+        if self.predecessor_address is None:
+            self.books[request.book_name] = request.book_price
+            self.propagate_update(
+                request.book_name, request.book_price, self.successor_address)
+        elif self.successor_address is None:
+            # If the current node is a tail node.
+            self.books[request.book_name] = request.book_price
+        else:
+            # If the head node contains the update that is received by the current node,
+            # pass the update to the next node in the chain.
+            if self.is_price_uptodate(request.book_name, request.book_price):
+                self.books[request.book_name] = request.book_price
+                self.propagate_update(
+                    request.book_name, request.book_price, self.successor_address)
+            else:
+                # If the current node received updates that are not present in the head node,
+                # redirect the request to the head node.
+                self.propagate_update(
+                    request.book_name, request.book_price, self.head_node_address)
+        return book_store_pb2.WriteToDataStoreResponse(success=True, message="Update triggered.")
 
     def ListBooks(self, request, context):
+        # TODO: Check the latest information from the head node.
         msg_string = ""
         if len(self.books) == 0:
             msg_string = "The shop is empty."
@@ -46,24 +65,27 @@ class DataStorageServicer(book_store_pb2_grpc.DataStorageServicer):
                 msg_string += f"{key}: {value}\n"
         return book_store_pb2.ListBooksResponse(success=True, message=msg_string)
 
-    # Not used in the draft
-    def CommonWriteOperation(self, request, context):
-        self.books[request.book_name] = request.price
+    def propagate_update(self, book_name, book_price, next_node_address):
+        """Propagate the update to the next node in the chain."""
+        stub = book_store_pb2_grpc.DataStorageStub(
+            grpc.insecure_channel(next_node_address))
+        try:
+            response = stub.WriteToDataStore(
+                book_store_pb2.WriteToDataStoreRequest(
+                    book_name=book_name, book_price=float(book_price)))
+        except grpc.RpcError:
+            response = book_store_pb2.WriteToDataStoreResponse(
+                success=False, message="Store is not available")
+        return response
 
-        if self.successor_address is not None:
-            channel = grpc.insecure_channel(self.successor_address)
-            stub = book_store_pb2_grpc.DataStorageStub(channel)
-            message = book_store_pb2.CommonWriteOperationRequest(book_name=request.book_name, price=request.price)
-            try:
-                response = stub.CommonWriteOperation(message)
-            except grpc.RpcError:
-                print("Server is not available")
-        else:
-            # When we reached the last process in the chain.
-            book_store_pb2.CommonWriteOperationResponse(success=True, message="All chains are updated.")
-
-
-
+    def is_price_uptodate(self, book_name, book_price):
+        """Check if the current node has the same price as the head node.
+        Head node must have the latest price for each book."""
+        stub = book_store_pb2_grpc.DataStorageStub(
+            grpc.insecure_channel(self.head_node_address))
+        response = stub.ReadFromDataStore(
+            book_store_pb2.ReadFromDataStoreRequest(book_name=book_name))
+        return True if str(book_price) in response.message else False
 
 
 class BookStoreClient:
@@ -72,32 +94,28 @@ class BookStoreClient:
         self.ip_address = ip_address
         self.client_id = None
         self.stub = stub
-        # Processes storage of DataStore objects.
+        # Dictionary for holding addresses of the data stores.
         self.processes_addresses = {}
-
         # Chain-related info
         self.processes_ids = []
         self.processes_ports = []
         self.is_chain_created = False
-
-        # Ordered processes in a chain.
+        # Container for a chain of processes.
         self.processes_chain = []
-        # List of all available commands.
-        self.commands = {"Local-store-ps": self.create_local_stores,
-                         "Create-chain": self.create_chain,
-                         "List-chain": self.list_chain,
-                         "Write-operation": self.write_operation,
-                         "List-books": self.list_books,
-                         "Read-operation": self.read_operation,
-                         "Data-status": self.data_status,
-                         "Remove-head": self.remove_head,
-                         "Restore-head": self.restore_head
-                         }
+        self.commands = {
+            "Local-store-ps": self.create_local_stores,
+            "Create-chain": self.create_chain,
+            "List-chain": self.list_chain,
+            "Write-operation": self.write,
+            "List-books": self.list_books,
+            "Read-operation": self.read,
+            "Data-status": self.data_status,
+            "Remove-head": self.remove_head,
+            "Restore-head": self.restore_head
+         }
 
-    ######################################
-    # Local-store-ps command             #
-    ######################################
     def create_local_stores(self, k=1):
+        """Local-store-ps command. Creates k processes on the client side."""
         # On the server side, it creates ids for the client and the processes.
         response = self.stub.CreateLocalStores(book_store_pb2.CreateLocalStoresRequest(processes_number=int(k),
                                                                                        ip_address = self.ip_address))
@@ -110,14 +128,12 @@ class BookStoreClient:
         else:
             print("Something went wrong. Processes are not initialized.")
 
-    ######################################
-    # Creates a chain of processes       #
-    ######################################
     def create_chain(self, args):
-        # Server creates a chain with all the processes and assigns ports for each DataStore.
-        # For each client's DataStore process we create 'servers' and run them in parallel.
-
-        response = self.stub.CreateChain(book_store_pb2.CreateChainRequest(client_id=self.client_id))
+        """Creates a chain of processes. Server creates a chain with all the processes
+         and assigns ports for each DataStore. For each client's DataStore process we
+         create 'servers' and run them in parallel."""
+        response = self.stub.CreateChain(
+            book_store_pb2.CreateChainRequest(client_id=self.client_id))
         if response.success:
             self.is_chain_created = True
             print(f"{response.message}")
@@ -141,33 +157,52 @@ class BookStoreClient:
         # Request to the server.
         pass
 
-    ######################################
-    # List-chain command                 #
-    ######################################
-    def list_chain(self):
-        # Makes a request to the server.
-        pass
+    def list_chain(self, args):
+        """Send a request to show the chain of processes. Print the response."""
+        # TODO: Make the output prettier.
+        print(self.stub.ListChain(book_store_pb2.ListChainRequest()))
 
-    ######################################
-    # Write-operation command            #
-    ######################################
-    def write_operation(self, book_name, price):
-        # Creates a data item, stores it in the DataStore objects.
-        #responsible_process = self.processes_ids[random.randint(0, len(self.processes_ids)-1)]
-        responsible_process = self.processes_ids[1] # hard-coded so far
+    def write(self, book_name, price):
+        """Write-operation command. Writes a new book to the chain."""
         if not self.is_chain_created:
-            print(f"To call this function, a chain must be created.")
+            print("To call this function, a chain must be created first.")
             return
 
+        # responsible_process = self.processes_ids[0]  # hard-coded so far
+        responsible_process = self.processes_ids[random.randint(0, len(self.processes_ids)-1)]
+        print(f"Writing to process {responsible_process}")
+
+        stub = book_store_pb2_grpc.DataStorageStub(
+            grpc.insecure_channel(f'{self.processes_addresses[responsible_process]}'))
+
+        try:
+            response = stub.WriteToDataStore(
+                book_store_pb2.WriteToDataStoreRequest(
+                    book_name=book_name, book_price=float(price)))
+            print(response.message)
+        except Exception as e:
+            print("New book wasn't added. Something went wrong.")
+            print(e)
+
+    def read(self, book_name: str):
+        """Read-operation command. Reads a book from the chain. Sends a request to
+        a DataStore process and prints the response."""
+        if not self.is_chain_created:
+            print("To call this function, a chain must be created first.")
+            return
+
+        # responsible_process = self.processes_ids[1]  # hard-coded so far
+        responsible_process = self.processes_ids[random.randint(0, len(self.processes_ids)-1)]
+        print(f"Reading from process {responsible_process}")
         channel = grpc.insecure_channel(f'{self.processes_addresses[responsible_process]}')
         stub = book_store_pb2_grpc.DataStorageStub(channel)
 
-        message = book_store_pb2.InitialWriteOperationRequest(book_name=book_name, book_price=float(price))
         try:
-            response = stub.InitialWriteOperation(message)
+            response = stub.ReadFromDataStore(
+                book_store_pb2.ReadFromDataStoreRequest(book_name=book_name))
             print(response.message)
         except:
-            print("New book wasn't added. Something went wrong.")
+            print("Unable to read the book. Something went wrong.")
 
     ######################################
     # List-books command                 #
@@ -179,22 +214,15 @@ class BookStoreClient:
             print(f"To call this function, a chain must be created.")
             return
 
-        # responsible_process = self.processes_ids[random.randint(0, len(self.processes_ids)-1)]
-        responsible_process = self.processes_ids[1]
+        responsible_process = self.processes_ids[random.randint(0, len(self.processes_ids)-1)]
+        # responsible_process = self.processes_ids[1]
+        print(f"Listing books from process {responsible_process}")
         channel = grpc.insecure_channel(f'{self.processes_addresses[responsible_process]}')
         stub = book_store_pb2_grpc.DataStorageStub(channel)
 
         message = book_store_pb2.ListBooksRequest()
         response = stub.ListBooks(message)
         print(f"Available books:\n{response.message}")
-
-    ######################################
-    # Read-operation command             #
-    ######################################
-    def read_operation(self, book_name: str):
-        # Shows the price of the book.
-        # Same data storage issue as discussed in the list-books method.
-        pass
 
     ######################################
     # Data-status command                #
@@ -223,20 +251,20 @@ class BookStoreClient:
     def initiate_process_creation(self, response):
         head_node_address = response.head_node_address
         processes_sucs_preds = dict(response.processes_sucs_preds)
-        processes_addresses = dict(response.processes_addresses)
+        self.processes_addresses = dict(response.processes_addresses)
 
         for process_id in self.processes_ids:
-            address = processes_addresses.get(process_id)
+            address = self.processes_addresses.get(process_id)
             predecessor_id = processes_sucs_preds[process_id].split(',')[0]
             successor_id = processes_sucs_preds[process_id].split(',')[1]
             if predecessor_id == 'None':
                 predecessor = None
             else:
-                predecessor = processes_addresses.get(predecessor_id)
+                predecessor = self.processes_addresses.get(predecessor_id)
             if successor_id == 'None':
                 successor = None
             else:
-                successor = processes_addresses.get(successor_id)
+                successor = self.processes_addresses.get(successor_id)
 
             #print(f"\n-- {predecessor_id} -- {process_id} -- {successor_id} --")
             #print(f"-- {predecessor} -- {address} -- {successor} --\n")
@@ -246,10 +274,21 @@ class BookStoreClient:
             print(f"Process {process_id} is running on {address}")
             process.start()
 
+    def remove_head(self):
+        """Initiate remove head on its local store. The local store should
+        know who is the head so it sends a request to the head to remove itself
+        and propagate that info further."""
+        pass
 
-def run_grpc_server(address, process_id, predecessor_address, successor_address, head_node_address):
+
+def run_grpc_server(address, process_id, predecessor_address,
+                    successor_address, head_node_address):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    book_store_pb2_grpc.add_DataStorageServicer_to_server(DataStorageServicer(process_id, address, predecessor_address, successor_address, head_node_address), server)
+    book_store_pb2_grpc.add_DataStorageServicer_to_server(
+        DataStorageServicer(
+            process_id, address, predecessor_address,
+            successor_address, head_node_address),
+        server)
     server.add_insecure_port(f'{address}')
     server.start()
     server.wait_for_termination()

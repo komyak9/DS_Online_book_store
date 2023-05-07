@@ -28,6 +28,7 @@ class BookStoreServicer(book_store_pb2_grpc.BookStoreServicer):
         client_id = f"Client{len(self.clients)+1}"
         print(f"New request from client: {client_id}")
 
+        # TODO: Add check if client already exists
         self.clients.append(client_id)
         self.client_ips[client_id] = request.ip_address
         self.client_processes[client_id] = []
@@ -55,6 +56,7 @@ class BookStoreServicer(book_store_pb2_grpc.BookStoreServicer):
         else:
             message = "Chain alreasy exists."
             print(message)
+            # TODO: return
 
         self.generate_processes_addresses()
 
@@ -80,6 +82,9 @@ class BookStoreServicer(book_store_pb2_grpc.BookStoreServicer):
                                                   processes_addresses=self.processes_addresses,
                                                   head_node_address=head_node_address)
 
+    def ListChain(self, request, context):
+        return book_store_pb2.ListChainResponse(
+            message="" if not self.is_chain_created else "->".join(self.processes_chain))
 
     def generate_processes_addresses(self):
         for client in self.clients:
@@ -94,8 +99,9 @@ class BookStoreServicer(book_store_pb2_grpc.BookStoreServicer):
             self.processes_with_sucs_preds[chain[i]] = chain[i - 1] + ',' + chain[i + 1]
         self.processes_with_sucs_preds[chain[-1]] = chain[-2] + ',' + 'None'
 
-    # Extracting processes with their predecessors and successors of the requesting client
     def extract_client_processes(self, client_id):
+        """Extracting processes with their predecessors and successors
+         of the requesting client"""
         processes_addresses = {}
         processes = self.client_processes[client_id]
         for pr in processes:
