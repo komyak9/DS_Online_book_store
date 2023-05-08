@@ -16,6 +16,7 @@ class DataStorageServicer(book_store_pb2_grpc.DataStorageServicer):
         self.predecessor_address = predecessor_address
         self.successor_address = successor_address
         self.books = {}
+        self.books_status = {}
 
     def ReadFromDataStore(self, request, context):
         """Fetch a book and its price from the data store.
@@ -34,25 +35,33 @@ class DataStorageServicer(book_store_pb2_grpc.DataStorageServicer):
         """Respond to client's request for writing a new book to the store.
         Add a new book to the head of the chain and propagate the message to the next node."""
         # If the current node is a head node.
+        print(f"Received request to write {request.book_name} to the store {self.store_id}.")
         if self.predecessor_address is None:
             self.books[request.book_name] = request.book_price
-            self.propagate_update(
+            self.books_status[request.book_name] = "Dirty"
+            self.propagate_book_update(
                 request.book_name, request.book_price, self.successor_address)
+            self.books_status[request.book_name] = "Clean"
         elif self.successor_address is None:
             # If the current node is a tail node.
             self.books[request.book_name] = request.book_price
+            self.books_status[request.book_name] = "Clean"
         else:
             # If the head node contains the update that is received by the current node,
             # pass the update to the next node in the chain.
             if self.is_price_uptodate(request.book_name, request.book_price):
                 self.books[request.book_name] = request.book_price
-                self.propagate_update(
+                self.books_status[request.book_name] = "Dirty"
+                self.propagate_book_update(
                     request.book_name, request.book_price, self.successor_address)
+                self.books_status[request.book_name] = "Clean"
             else:
                 # If the current node received updates that are not present in the head node,
                 # redirect the request to the head node.
-                self.propagate_update(
+                self.books_status[request.book_name] = "Dirty"
+                self.propagate_book_update(
                     request.book_name, request.book_price, self.head_node_address)
+                self.books_status[request.book_name] = "Clean"
         return book_store_pb2.WriteToDataStoreResponse(success=True, message="Update triggered.")
 
     def ListBooks(self, request, context):
@@ -64,8 +73,42 @@ class DataStorageServicer(book_store_pb2_grpc.DataStorageServicer):
             for key, value in self.books.items():
                 msg_string += f"{key}: {value}\n"
         return book_store_pb2.ListBooksResponse(success=True, message=msg_string)
+    
+    def UpdateNewHeadNode(self, request, context):
+        """Get new head node adress from the client and 
+        update the head node address."""
+       
+        #print(f"Old head node address: {self.head_node_address}")
+        #self.head_node_address = request.new_head_node_address
+        print("testing 1")
 
-    def propagate_update(self, book_name, book_price, next_node_address):
+        if self.successor_address is None:
+            # If the current node is a tail node.
+            self.head_node_address = request.new_head_node_address
+            print("testing 2")
+        else:
+            print(f"This is {self.address}. New head node address: {self.head_node_address}")
+            print("testing 3")
+            self.propagate_head_node_update(
+                request.new_head_node_address, self.successor_address)
+            print("testing 4")
+        print("testing 5")
+        return book_store_pb2.UpdateNewHeadNodeResponse(success=True, message=f"This is {self.address}. New head node address: {self.head_node_address}")
+
+    def propagate_head_node_update(self, head_node_address, next_node_address):
+        """Propagate the update of head node adress to the next node in the chain."""
+        stub = book_store_pb2_grpc.DataStorageStub(
+            grpc.insecure_channel(next_node_address))
+        try:
+            response = stub.UpdateNewHeadNode(
+                book_store_pb2.UpdateNewHeadNodeRequest(
+                    new_head_node_address = head_node_address))
+        except grpc.RpcError:
+            response = book_store_pb2.UpdateNewHeadNodeResponse(
+                success=False, message="Store is not available")
+        return response
+
+    def propagate_book_update(self, book_name, book_price, next_node_address):
         """Propagate the update to the next node in the chain."""
         stub = book_store_pb2_grpc.DataStorageStub(
             grpc.insecure_channel(next_node_address))
@@ -77,6 +120,20 @@ class DataStorageServicer(book_store_pb2_grpc.DataStorageServicer):
             response = book_store_pb2.WriteToDataStoreResponse(
                 success=False, message="Store is not available")
         return response
+    
+    # This is Pavlo's code
+    # def propagate_update(self, book_name, book_price, next_node_address):
+    #     """Propagate the update to the next node in the chain."""
+    #     stub = book_store_pb2_grpc.DataStorageStub(
+    #         grpc.insecure_channel(next_node_address))
+    #     try:
+    #         response = stub.WriteToDataStore(
+    #             book_store_pb2.WriteToDataStoreRequest(
+    #                 book_name=book_name, book_price=float(book_price)))
+    #     except grpc.RpcError:
+    #         response = book_store_pb2.WriteToDataStoreResponse(
+    #             success=False, message="Store is not available")
+    #     return response
 
     def is_price_uptodate(self, book_name, book_price):
         """Check if the current node has the same price as the head node.
@@ -86,6 +143,16 @@ class DataStorageServicer(book_store_pb2_grpc.DataStorageServicer):
         response = stub.ReadFromDataStore(
             book_store_pb2.ReadFromDataStoreRequest(book_name=book_name))
         return True if str(book_price) in response.message else False
+    
+    def DataStatus(self, request, context):
+        """Return the status of books."""
+        msg_string = ""
+        if len(self.books) == 0:
+            msg_string = "The shop is empty."
+        else:
+            for key, value in self.books_status.items():
+                msg_string += f"{key}: {value}\n"
+        return book_store_pb2.DataStatusResponse(success=True, message=msg_string)
 
 
 class BookStoreClient:
@@ -100,6 +167,7 @@ class BookStoreClient:
         self.processes_ids = []
         self.processes_ports = []
         self.is_chain_created = False
+        self.head_node_address = None
         # Container for a chain of processes.
         self.processes_chain = []
         self.commands = {
@@ -147,14 +215,27 @@ class BookStoreClient:
     # Removes chain's head               #
     ######################################
     def remove_head(self, args):
-        # Request server to remove the head.
+        """Request server to remove the head node. And return the new one."""
 
-        response = self.stub.RemoveHead(book_store_pb2.RemoveHeadRequest(client_id=self.client_id))
+        response = self.stub.RemoveHead(
+            book_store_pb2.RemoveHeadRequest(client_id=self.client_id))
         if response.success:
             print(f"Response: {response.message}")
-            self.initiate_process_creation(response)
-            print(f"Process Created")
-            print(f"Client id: ", {self.client_id})
+            self.head_node_address = response.head_node_address
+            print(f"New head node adress is: {self.head_node_address}")
+
+            # Update head_node_adress in all local stores
+            for responsible_process in self.processes_ids:
+                channel = grpc.insecure_channel(f'{self.processes_addresses[responsible_process]}')
+                stub = book_store_pb2_grpc.DataStorageStub(channel)
+
+                try:
+                    response = stub.UpdateNewHeadNode(
+                        book_store_pb2.UpdateNewHeadNodeRequest(new_head_node_address=self.head_node_address))
+                    print(response.message)
+                except Exception as e:
+                    print("Unable to update. Something went wrong.")
+                    print(e)
         else:
             print(f"Head is not removed: {response.message}")
 
@@ -170,6 +251,7 @@ class BookStoreClient:
         # TODO: Make the output prettier.
         print(self.stub.ListChain(book_store_pb2.ListChainRequest()))
 
+
     def write(self, book_name, price):
         """Write-operation command. Writes a new book to the chain."""
         if not self.is_chain_created:
@@ -177,7 +259,7 @@ class BookStoreClient:
             return
 
         # responsible_process = self.processes_ids[0]  # hard-coded so far
-        responsible_process = self.processes_ids[random.randint(0, len(self.processes_ids)-1)]
+        responsible_process = self.processes_ids[random.randint(0, len(self.processes_ids)-2)]
         print(f"Writing to process {responsible_process}")
 
         stub = book_store_pb2_grpc.DataStorageStub(
@@ -235,9 +317,14 @@ class BookStoreClient:
     ######################################
     # Data-status command                #
     ######################################
-    def data_status(self):
+    def data_status(self, args):
         # Need to check the theory for dirty/clean definitions.
-        pass
+        responsible_process = self.processes_ids[random.randint(0, len(self.processes_ids)-1)]
+        channel = grpc.insecure_channel(f'{self.processes_addresses[responsible_process]}')
+        stub = book_store_pb2_grpc.DataStorageStub(channel)
+        message = book_store_pb2.DataStatusRequest()
+        response = stub.DataStatus(message)
+        print(f"{response.message}")
 
 
     def check_chain_created(self):
@@ -274,19 +361,20 @@ class BookStoreClient:
             else:
                 successor = self.processes_addresses.get(successor_id)
 
-            print(f"\n-- {predecessor_id} -- {process_id} -- {successor_id} --")
-            print(f"-- {predecessor} -- {address} -- {successor} --\n")
+            #print(f"\n-- {predecessor_id} -- {process_id} -- {successor_id} --")
+            #print(f"-- {predecessor} -- {address} -- {successor} --\n")
             process = multiprocessing.Process(target=run_grpc_server,
                                               args=(address, process_id, predecessor, successor,
                                                     head_node_address,))
             print(f"Process {process_id} is running on {address}")
             process.start()
 
-    def remove_head(self):
+    #def remove_head(self):
         """Initiate remove head on its local store. The local store should
         know who is the head so it sends a request to the head to remove itself
         and propagate that info further."""
-        pass
+
+        #pass
 
 
 def run_grpc_server(address, process_id, predecessor_address,

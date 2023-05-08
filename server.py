@@ -4,6 +4,7 @@ import time
 import random
 
 import grpc
+from requests import head
 import book_store_pb2
 import book_store_pb2_grpc
 
@@ -85,24 +86,24 @@ class BookStoreServicer(book_store_pb2_grpc.BookStoreServicer):
     
     def RemoveHead(self, request, context):
         if self.is_chain_created:
-            popped_process = self.processes_chain[0]
+            old_head_node = self.processes_chain[0]
             self.processes_chain.pop(0)
-            print(f"Poped process: {popped_process}")
-            print(f"Head node was removed. New chain: {self.processes_chain}")
+            print(f"Old head node is: {old_head_node}")
             message = "Head node removed successfully."
 
             #self.generate_processes_addresses()
 
             # To each client we need to send info only about it's processes
             # We send it in a format ---process_id:[predecessor_address, successor_id]---
-            self.arrange_predecessors_and_successors(self.processes_chain)  # Create [succ-r, pred-r] dict for all processes
-            client_processes_preds_sucs = self.extract_client_processes(request.client_id)    # Extract those only for this client
-            head_node_address = self.processes_addresses[self.processes_chain[0]]
+            #self.arrange_predecessors_and_successors(self.processes_chain)  # Create [succ-r, pred-r] dict for all processes
+            #client_processes_preds_sucs = self.extract_client_processes(request.client_id)    # Extract those only for this client
+            new_head_node_adress = self.processes_addresses[self.processes_chain[0]]
+            print(f"New head node is: {new_head_node_adress}")
             
             return book_store_pb2.RemoveHeadResponse(success=True, message=message,
-                                                     processes_sucs_preds = client_processes_preds_sucs,
-                                                     processes_addresses = self.processes_addresses,
-                                                     head_node_address=head_node_address)
+                                                     #processes_sucs_preds = client_processes_preds_sucs,
+                                                     #processes_addresses = self.processes_addresses,
+                                                     head_node_address=new_head_node_adress)
         
         else:
             message = "Chain does not exist."

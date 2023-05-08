@@ -217,15 +217,20 @@ class DataStorageStub(object):
                 request_serializer=book__store__pb2.WriteToDataStoreRequest.SerializeToString,
                 response_deserializer=book__store__pb2.WriteToDataStoreResponse.FromString,
                 )
-        self.CommonWriteOperation = channel.unary_unary(
-                '/DataStorage/CommonWriteOperation',
-                request_serializer=book__store__pb2.CommonWriteOperationRequest.SerializeToString,
-                response_deserializer=book__store__pb2.CommonWriteOperationResponse.FromString,
-                )
         self.ListBooks = channel.unary_unary(
                 '/DataStorage/ListBooks',
                 request_serializer=book__store__pb2.ListBooksRequest.SerializeToString,
                 response_deserializer=book__store__pb2.ListBooksResponse.FromString,
+                )
+        self.UpdateNewHeadNode = channel.unary_unary(
+                '/DataStorage/UpdateNewHeadNode',
+                request_serializer=book__store__pb2.UpdateNewHeadNodeRequest.SerializeToString,
+                response_deserializer=book__store__pb2.UpdateNewHeadNodeResponse.FromString,
+                )
+        self.DataStatus = channel.unary_unary(
+                '/DataStorage/DataStatus',
+                request_serializer=book__store__pb2.DataStatusRequest.SerializeToString,
+                response_deserializer=book__store__pb2.DataStatusResponse.FromString,
                 )
 
 
@@ -244,13 +249,19 @@ class DataStorageServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def CommonWriteOperation(self, request, context):
+    def ListBooks(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def ListBooks(self, request, context):
+    def UpdateNewHeadNode(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DataStatus(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -269,15 +280,20 @@ def add_DataStorageServicer_to_server(servicer, server):
                     request_deserializer=book__store__pb2.WriteToDataStoreRequest.FromString,
                     response_serializer=book__store__pb2.WriteToDataStoreResponse.SerializeToString,
             ),
-            'CommonWriteOperation': grpc.unary_unary_rpc_method_handler(
-                    servicer.CommonWriteOperation,
-                    request_deserializer=book__store__pb2.CommonWriteOperationRequest.FromString,
-                    response_serializer=book__store__pb2.CommonWriteOperationResponse.SerializeToString,
-            ),
             'ListBooks': grpc.unary_unary_rpc_method_handler(
                     servicer.ListBooks,
                     request_deserializer=book__store__pb2.ListBooksRequest.FromString,
                     response_serializer=book__store__pb2.ListBooksResponse.SerializeToString,
+            ),
+            'UpdateNewHeadNode': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateNewHeadNode,
+                    request_deserializer=book__store__pb2.UpdateNewHeadNodeRequest.FromString,
+                    response_serializer=book__store__pb2.UpdateNewHeadNodeResponse.SerializeToString,
+            ),
+            'DataStatus': grpc.unary_unary_rpc_method_handler(
+                    servicer.DataStatus,
+                    request_deserializer=book__store__pb2.DataStatusRequest.FromString,
+                    response_serializer=book__store__pb2.DataStatusResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -324,23 +340,6 @@ class DataStorage(object):
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def CommonWriteOperation(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/DataStorage/CommonWriteOperation',
-            book__store__pb2.CommonWriteOperationRequest.SerializeToString,
-            book__store__pb2.CommonWriteOperationResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
     def ListBooks(request,
             target,
             options=(),
@@ -354,5 +353,39 @@ class DataStorage(object):
         return grpc.experimental.unary_unary(request, target, '/DataStorage/ListBooks',
             book__store__pb2.ListBooksRequest.SerializeToString,
             book__store__pb2.ListBooksResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def UpdateNewHeadNode(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/DataStorage/UpdateNewHeadNode',
+            book__store__pb2.UpdateNewHeadNodeRequest.SerializeToString,
+            book__store__pb2.UpdateNewHeadNodeResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def DataStatus(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/DataStorage/DataStatus',
+            book__store__pb2.DataStatusRequest.SerializeToString,
+            book__store__pb2.DataStatusResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
