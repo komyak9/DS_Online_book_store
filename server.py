@@ -1,4 +1,5 @@
 from concurrent import futures
+from multiprocessing import process
 import time
 import random
 
@@ -81,6 +82,31 @@ class BookStoreServicer(book_store_pb2_grpc.BookStoreServicer):
                                                   processes_sucs_preds=client_processes_preds_sucs,
                                                   processes_addresses=self.processes_addresses,
                                                   head_node_address=head_node_address)
+    
+    def RemoveHead(self, request, context):
+        if self.is_chain_created:
+            popped_process = self.processes_chain[0]
+            self.processes_chain.pop(0)
+            print(f"Poped process: {popped_process}")
+            print(f"Head node was removed. New chain: {self.processes_chain}")
+            message = "Head node removed successfully."
+
+            #self.generate_processes_addresses()
+
+            # To each client we need to send info only about it's processes
+            # We send it in a format ---process_id:[predecessor_address, successor_id]---
+            self.arrange_predecessors_and_successors(self.processes_chain)  # Create [succ-r, pred-r] dict for all processes
+            client_processes_preds_sucs = self.extract_client_processes(request.client_id)    # Extract those only for this client
+            head_node_address = self.processes_addresses[self.processes_chain[0]]
+            
+            return book_store_pb2.RemoveHeadResponse(success=True, message=message,
+                                                     processes_sucs_preds = client_processes_preds_sucs,
+                                                     processes_addresses = self.processes_addresses,
+                                                     head_node_address=head_node_address)
+        
+        else:
+            message = "Chain does not exist."
+            return book_store_pb2.RemoveHeadResponse(success=False, message=message)
 
     def ListChain(self, request, context):
         return book_store_pb2.ListChainResponse(

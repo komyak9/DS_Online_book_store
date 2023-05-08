@@ -5,6 +5,7 @@ service BookStore {
   rpc CreateChain(CreateChainRequest) returns (CreateChainResponse) {}
   rpc CheckChain(CheckChainRequest) returns (CheckChainResponse) {}
   rpc ListChain(ListChainRequest) returns (ListChainResponse) {}
+  rpc RemoveHead(RemoveHeadRequest) returns (RemoveHeadResponse) {}
 }
 
 message CreateLocalStoresRequest {
@@ -44,6 +45,18 @@ message CheckChainResponse {
 
 message ListChainRequest {
 }
+message RemoveHeadRequest {
+  string client_id = 1;
+}
+
+message RemoveHeadResponse {
+  bool success = 1;
+  string message = 2;
+  map<string, string> processes_sucs_preds = 3;
+  map<string, string> processes_addresses = 4;
+  string head_node_address = 5;
+}
+
 
 message ListChainResponse {
   string message = 1;

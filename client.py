@@ -146,9 +146,17 @@ class BookStoreClient:
     ######################################
     # Removes chain's head               #
     ######################################
-    def remove_head(self):
-        # Request to the server?
-        pass
+    def remove_head(self, args):
+        # Request server to remove the head.
+
+        response = self.stub.RemoveHead(book_store_pb2.RemoveHeadRequest(client_id=self.client_id))
+        if response.success:
+            print(f"Response: {response.message}")
+            self.initiate_process_creation(response)
+            print(f"Process Created")
+            print(f"Client id: ", {self.client_id})
+        else:
+            print(f"Head is not removed: {response.message}")
 
     ######################################
     # Restored chain's head              #
@@ -266,8 +274,8 @@ class BookStoreClient:
             else:
                 successor = self.processes_addresses.get(successor_id)
 
-            #print(f"\n-- {predecessor_id} -- {process_id} -- {successor_id} --")
-            #print(f"-- {predecessor} -- {address} -- {successor} --\n")
+            print(f"\n-- {predecessor_id} -- {process_id} -- {successor_id} --")
+            print(f"-- {predecessor} -- {address} -- {successor} --\n")
             process = multiprocessing.Process(target=run_grpc_server,
                                               args=(address, process_id, predecessor, successor,
                                                     head_node_address,))
