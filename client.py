@@ -3,6 +3,7 @@ from concurrent import futures
 import multiprocessing
 import threading
 import time
+from ml_model import Book_Suggestions
 
 import grpc
 import book_store_pb2
@@ -172,8 +173,10 @@ class BookStoreClient:
             "Read-operation": self.read,
             "Data-status": self.data_status,
             "Remove-head": self.remove_head,
-            "Restore-head": self.restore_head
+            "Restore-head": self.restore_head,
+            "ML-list-recommend": self.ml_list_recommend
          }
+        self.model = run_ml_model()
 
     def create_local_stores(self, k=1):
         """Local-store-ps command. Creates k processes on the client side."""
@@ -340,6 +343,19 @@ class BookStoreClient:
         response = stub.DataStatus(message)
         print(f"{response.message}")
 
+    ######################################
+    # ml_list_recommend command          #
+    ######################################
+    def ml_list_recommend(self, args):
+        book_name = input('Enter a book name: ')
+        neighbor_count = int(input("Enter number of suggestions: "))
+        neighbors = self.model.get_recommendations(book_name, neighbor_count)
+        if neighbors == "Book is not recognized.":
+            print(neighbors)
+            return
+        print('Recommendations:')
+        for n in neighbors:
+            print('\t' + n)
 
     def check_chain_created(self):
         while not self.is_chain_created:
@@ -424,6 +440,13 @@ def run_client():
                 method(*args)   # Execute method.
             else:   # If such method doesn't exist.
                 print(f"Command {command} does not exist.")
+
+def run_ml_model():
+    m = Book_Suggestions()
+    m.read_data()
+    m.extract_data()
+    m.build_model()
+    return m
 
 
 if __name__ == '__main__':

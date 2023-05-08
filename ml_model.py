@@ -1,4 +1,5 @@
 import pandas as pd
+import warnings
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse import csr_matrix
 import difflib
@@ -15,6 +16,7 @@ class Book_Suggestions():
         self.clean_data = []
         self.pivot_table = None
         self.model = None
+        warnings.filterwarnings('ignore')
 
 
     def read_data(self):
@@ -34,63 +36,44 @@ class Book_Suggestions():
                                 usecols=['user', 'isbn', 'rating'],  # selecting only relevant columns
                                 dtype={'user': 'int32', 'isbn': 'str', 'rating': 'float32'})
 
-        print("Data was read.")
-
     def extract_data(self):
-        # extracting the users
+        # Extract the users
         user_ratings = self.book_ratings['user'].value_counts() > 200
         y = user_ratings[user_ratings].index
         useful_ratings = self.book_ratings[self.book_ratings['user'].isin(y)]
-        print(f"Data partially extracted.")
-        # merge these ratings with the books
+        # Merge ratings with the books
         df = useful_ratings.merge(self.book_data, on='isbn')
-        # let's extract the books that has more than 50 ratings
+
+        # Extract the books that have more than 10 ratings
+        num_ratings = 10
         number_rating = df.groupby('title')['rating'].count().reset_index()
-        print(f"Ratings applied..")
-        # Here we have grouped the titles based on number of ratings received
+        # Group the titles based on number of ratings received
         number_rating.rename(columns={'rating': 'number_of_ratings'}, inplace=True)
-        # Now merge this dataframe with your originalone
         df1 = df.merge(number_rating, on='title')
-        df2 = df1[df1['number_of_ratings']>=30]
+        df2 = df1[df1['number_of_ratings'] > num_ratings]
+
         df2.drop_duplicates(['user', 'title'], inplace=True)
-        print(f"Data fully extracted.")
         self.clean_data = df2
 
     def build_model(self):
-        # create a pivot table
+        # Create a pivot table
         self.pivot_table = self.clean_data.pivot_table(columns='user', index='title', values='rating')
         self.pivot_table.fillna(0, inplace=True)
         sparse_matrix = csr_matrix(self.pivot_table)
-        # feed this matrix to our model
+        # Create and train a model
         self.model = NearestNeighbors(algorithm='brute')
         self.model.fit(sparse_matrix)
 
-    def get_recommendations(self, book_name):
+    def get_recommendations(self, book_name, num_neighbors=3):
         try:
             close_match = difflib.get_close_matches(book_name, self.pivot_table.index.to_list())[0]
         except IndexError:
-            return 'Book is not available'
+            return 'Book is not recognized.'
         idx = np.where(self.pivot_table.index == close_match)[0][0]
-        ls = [close_match]
-        distances, neighbours = self.model.kneighbors(self.pivot_table.iloc[idx, :].values.reshape(1, -1), n_neighbors=6)
-        neighbours = list(neighbours[0])
-        for i in range(len(neighbours)):
+        neighbor_books_names = []
+        distances, neighbours_ids = self.model.kneighbors(self.pivot_table.iloc[idx, :].values.reshape(1, -1), n_neighbors=num_neighbors+1)
+        neighbours_ids = list(neighbours_ids[0])
+        for i in range(len(neighbours_ids)):
             if i != 0:
-                ls.append([self.pivot_table.index[neighbours[i]], distances[0][i]])
-        return ls
-
-
-def main():
-    m = Book_Suggestions()
-    m.read_data()
-    m.extract_data()
-    m.build_model()
-
-    book_name = None
-    while book_name != 'exit':
-        book_name = input('Enter your favourite book name: ')
-        print()
-        print(m.get_recommendations(book_name))
-
-
-main()
+                neighbor_books_names.append([self.pivot_table.index[neighbours_ids[i]], distances[0][i]][0])
+        return neighbor_books_names

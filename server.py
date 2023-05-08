@@ -5,7 +5,6 @@ import time
 import random
 
 import grpc
-from requests import head
 import book_store_pb2
 import book_store_pb2_grpc
 
