@@ -39,6 +39,11 @@ class BookStoreStub(object):
                 request_serializer=book__store__pb2.RemoveHeadRequest.SerializeToString,
                 response_deserializer=book__store__pb2.RemoveHeadResponse.FromString,
                 )
+        self.RestoreHead = channel.unary_unary(
+                '/BookStore/RestoreHead',
+                request_serializer=book__store__pb2.RestoreHeadRequest.SerializeToString,
+                response_deserializer=book__store__pb2.RestoreHeadResponse.FromString,
+                )
 
 
 class BookStoreServicer(object):
@@ -74,6 +79,12 @@ class BookStoreServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def RestoreHead(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_BookStoreServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -101,6 +112,11 @@ def add_BookStoreServicer_to_server(servicer, server):
                     servicer.RemoveHead,
                     request_deserializer=book__store__pb2.RemoveHeadRequest.FromString,
                     response_serializer=book__store__pb2.RemoveHeadResponse.SerializeToString,
+            ),
+            'RestoreHead': grpc.unary_unary_rpc_method_handler(
+                    servicer.RestoreHead,
+                    request_deserializer=book__store__pb2.RestoreHeadRequest.FromString,
+                    response_serializer=book__store__pb2.RestoreHeadResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -194,6 +210,23 @@ class BookStore(object):
         return grpc.experimental.unary_unary(request, target, '/BookStore/RemoveHead',
             book__store__pb2.RemoveHeadRequest.SerializeToString,
             book__store__pb2.RemoveHeadResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def RestoreHead(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/BookStore/RestoreHead',
+            book__store__pb2.RestoreHeadRequest.SerializeToString,
+            book__store__pb2.RestoreHeadResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

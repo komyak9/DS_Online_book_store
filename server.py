@@ -1,5 +1,6 @@
 from concurrent import futures
 from multiprocessing import process
+from os import remove
 import time
 import random
 
@@ -25,6 +26,7 @@ class BookStoreServicer(book_store_pb2_grpc.BookStoreServicer):
         self.is_chain_created = False
         self.processes_with_sucs_preds = {}
         self.processes_chain = []
+        self.removed_head_nodes = []
 
     def CreateLocalStores(self, request, context):
         client_id = f"Client{len(self.clients)+1}"
@@ -86,28 +88,41 @@ class BookStoreServicer(book_store_pb2_grpc.BookStoreServicer):
     
     def RemoveHead(self, request, context):
         if self.is_chain_created:
-            old_head_node = self.processes_chain[0]
+            self.removed_head_nodes.append(self.processes_chain[0])
             self.processes_chain.pop(0)
-            print(f"Old head node is: {old_head_node}")
+            print(f"Old head node is: {self.processes_addresses[self.removed_head_nodes[-1]]}")
             message = "Head node removed successfully."
 
-            #self.generate_processes_addresses()
-
-            # To each client we need to send info only about it's processes
-            # We send it in a format ---process_id:[predecessor_address, successor_id]---
-            #self.arrange_predecessors_and_successors(self.processes_chain)  # Create [succ-r, pred-r] dict for all processes
-            #client_processes_preds_sucs = self.extract_client_processes(request.client_id)    # Extract those only for this client
             new_head_node_adress = self.processes_addresses[self.processes_chain[0]]
             print(f"New head node is: {new_head_node_adress}")
             
             return book_store_pb2.RemoveHeadResponse(success=True, message=message,
-                                                     #processes_sucs_preds = client_processes_preds_sucs,
-                                                     #processes_addresses = self.processes_addresses,
                                                      head_node_address=new_head_node_adress)
         
         else:
             message = "Chain does not exist."
             return book_store_pb2.RemoveHeadResponse(success=False, message=message)
+
+    def RestoreHead(self, request, context):
+        if self.is_chain_created:
+            print(f"Old head node is: {self.processes_addresses[self.processes_chain[0]]}")
+            
+            # Restore the removed head node
+            restored_client_name = self.removed_head_nodes.pop(0)
+            new_head_node_adress = self.processes_addresses[restored_client_name]
+            
+            # Add the name of the client and the process to the chain
+            self.processes_chain.insert(0, restored_client_name)
+
+            message = "Old head node retrieved successfully."
+            print(f"New head node is: {new_head_node_adress}")
+
+            return book_store_pb2.RestoreHeadResponse(success=True, message=message,
+                                                     head_node_address=new_head_node_adress)
+        
+        else:
+            message = "Chain does not exist."
+            return book_store_pb2.RestoreHeadResponse(success=False, message=message)
 
     def ListChain(self, request, context):
         return book_store_pb2.ListChainResponse(

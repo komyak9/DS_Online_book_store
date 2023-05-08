@@ -77,24 +77,17 @@ class DataStorageServicer(book_store_pb2_grpc.DataStorageServicer):
     def UpdateNewHeadNode(self, request, context):
         """Get new head node adress from the client and 
         update the head node address."""
-       
-        #print(f"Old head node address: {self.head_node_address}")
-        #self.head_node_address = request.new_head_node_address
-        print("testing 1")
 
         if self.successor_address is None:
             # If the current node is a tail node.
             self.head_node_address = request.new_head_node_address
-            print("testing 2")
+            message = f"This is {self.address}. New head node address: {self.head_node_address}"
         else:
-            print(f"This is {self.address}. New head node address: {self.head_node_address}")
-            print("testing 3")
+            message = f"This is {self.address}. New head node address: {request.new_head_node_address}"
             self.propagate_head_node_update(
                 request.new_head_node_address, self.successor_address)
-            print("testing 4")
-        print("testing 5")
-        return book_store_pb2.UpdateNewHeadNodeResponse(success=True, message=f"This is {self.address}. New head node address: {self.head_node_address}")
-
+        return book_store_pb2.UpdateNewHeadNodeResponse(success=True, message=message)
+    
     def propagate_head_node_update(self, head_node_address, next_node_address):
         """Propagate the update of head node adress to the next node in the chain."""
         stub = book_store_pb2_grpc.DataStorageStub(
@@ -215,7 +208,8 @@ class BookStoreClient:
     # Removes chain's head               #
     ######################################
     def remove_head(self, args):
-        """Request server to remove the head node. And return the new one."""
+        """Request server to remove the head node. And return the new one
+        to processes to update their new head node addresses."""
 
         response = self.stub.RemoveHead(
             book_store_pb2.RemoveHeadRequest(client_id=self.client_id))
@@ -242,9 +236,30 @@ class BookStoreClient:
     ######################################
     # Restored chain's head              #
     ######################################
-    def restore_head(self):
-        # Request to the server.
-        pass
+    def restore_head(self, args):
+        """Request server to get the last removed head node. And return the removed one
+          to processes to add the new head node."""
+        response = self.stub.RestoreHead(
+            book_store_pb2.RestoreHeadRequest(client_id=self.client_id))
+        if response.success:
+            print(f"Response: {response.message}")
+            self.head_node_address = response.head_node_address
+            print(f"Retrieved head node adress is: {self.head_node_address}")
+
+            # Update head_node_adress in all local stores
+            for responsible_process in self.processes_ids:
+                channel = grpc.insecure_channel(f'{self.processes_addresses[responsible_process]}')
+                stub = book_store_pb2_grpc.DataStorageStub(channel)
+
+                try:
+                    response = stub.UpdateNewHeadNode(
+                        book_store_pb2.UpdateNewHeadNodeRequest(new_head_node_address=self.head_node_address))
+                    print(response.message)
+                except Exception as e:
+                    print("Unable to update. Something went wrong.")
+                    print(e)
+        else:
+            print(f"Head is not removed: {response.message}")
 
     def list_chain(self, args):
         """Send a request to show the chain of processes. Print the response."""
@@ -318,7 +333,6 @@ class BookStoreClient:
     # Data-status command                #
     ######################################
     def data_status(self, args):
-        # Need to check the theory for dirty/clean definitions.
         responsible_process = self.processes_ids[random.randint(0, len(self.processes_ids)-1)]
         channel = grpc.insecure_channel(f'{self.processes_addresses[responsible_process]}')
         stub = book_store_pb2_grpc.DataStorageStub(channel)
@@ -368,14 +382,6 @@ class BookStoreClient:
                                                     head_node_address,))
             print(f"Process {process_id} is running on {address}")
             process.start()
-
-    #def remove_head(self):
-        """Initiate remove head on its local store. The local store should
-        know who is the head so it sends a request to the head to remove itself
-        and propagate that info further."""
-
-        #pass
-
 
 def run_grpc_server(address, process_id, predecessor_address,
                     successor_address, head_node_address):
