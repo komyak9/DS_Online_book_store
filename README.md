@@ -26,3 +26,23 @@ Each data store has links to its previous and next data stores, and to the head.
 When a write operation is called, a new book is added to the head and an update is propagated along the chain from data store to data store.
 
 Read operation can retrieve a book from any data store.
+
+## ML-list-recommend command
+
+Command description:
+
+The command doesn't take any arguments, but during execution it asks a user to input a book's name and a number of suggestions.
+User inputs a book's name and number of suggestions he/she wants to get.
+As output, user receives a list of N books (their names).
+
+Limitations:
+
+Program can find closest neighbors only to those books which it "knows" (it is present in the dataset). If a user inputs a book name that the model is not aware of the book, it will print a message that the book is not recognized.
+
+Model description:
+
+We use a KNN model that finds closest neighbors to the book based on their ratings.
+The model is trained on book data from the Book-Crossing Dataset (Cai-Nicolas Ziegler, DBIS Freiburg).
+
+Source of the solution:
+https://github.com/Saipavan790/Recommender-Systems/tree/main
