@@ -15,6 +15,7 @@ Available commands are:
 * Data-status: Shows the status of the books in the chain
 * Remove-head: Removes the head of the chain
 * Restore-head: Restores the head of the chain
+* ML-list-recommend: Recommends a particular number of books
 
 ## Server
 Server is implemented according to a gRPC protocol. It receives requests from the client and responds accordingly.
